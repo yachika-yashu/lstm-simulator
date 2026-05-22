@@ -1,0 +1,486 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LSTM Interactive Simulator</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f5f5f5;
+            padding: 20px;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 8px;
+            padding: 30px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        h1 {
+            font-size: 20px;
+            margin-bottom: 8px;
+            color: #333;
+            font-weight: 600;
+        }
+
+        .subtitle {
+            font-size: 13px;
+            color: #666;
+            margin-bottom: 20px;
+        }
+
+        .word-buttons {
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+            margin-bottom: 24px;
+        }
+
+        .word-btn {
+            padding: 8px 14px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            background: #f9f9f9;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+
+        .word-btn:hover {
+            background: #f0f0f0;
+            border-color: #ccc;
+        }
+
+        .word-btn.active {
+            background: #0066cc;
+            color: white;
+            border-color: #0066cc;
+        }
+
+        .gates-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+            margin-bottom: 20px;
+        }
+
+        @media (max-width: 600px) {
+            .gates-container {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .gate-card {
+            background: #f9f9f9;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 14px;
+        }
+
+        .gate-title {
+            font-weight: 600;
+            font-size: 13px;
+            margin-bottom: 12px;
+            color: #333;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .gate-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+
+        .gate-label {
+            font-size: 12px;
+            min-width: 70px;
+            color: #666;
+        }
+
+        .gate-bar {
+            height: 20px;
+            flex: 1;
+            background: white;
+            border: 0.5px solid #ddd;
+            border-radius: 3px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .bar-fill {
+            height: 100%;
+            transition: width 0.4s ease;
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            padding-right: 4px;
+            font-size: 10px;
+            font-weight: 600;
+            color: white;
+        }
+
+        .forget-bar {
+            background: #D05538;
+        }
+
+        .input-bar {
+            background: #639922;
+        }
+
+        .output-bar {
+            background: #EF9F27;
+        }
+
+        .gate-value {
+            font-size: 12px;
+            font-weight: 600;
+            min-width: 35px;
+            text-align: right;
+            color: #333;
+        }
+
+        .memory-card {
+            background: #f9f9f9;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 14px;
+            margin-bottom: 16px;
+        }
+
+        .memory-title {
+            font-weight: 600;
+            font-size: 13px;
+            margin-bottom: 10px;
+            color: #333;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .memory-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 6px 0;
+            font-size: 12px;
+            border-bottom: 0.5px solid #ddd;
+        }
+
+        .memory-row:last-child {
+            border-bottom: none;
+        }
+
+        .memory-label {
+            color: #666;
+        }
+
+        .memory-value {
+            font-family: 'Courier New', monospace;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .insight-card {
+            background: #e3f2fd;
+            border-left: 3px solid #0066cc;
+            border-radius: 6px;
+            padding: 12px;
+            font-size: 13px;
+            color: #0066cc;
+            line-height: 1.6;
+            margin-bottom: 20px;
+        }
+
+        .insight-card strong {
+            color: #003d99;
+        }
+
+        .nav-buttons {
+            display: flex;
+            gap: 12px;
+            justify-content: center;
+            margin-top: 20px;
+        }
+
+        .nav-btn {
+            padding: 8px 16px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            background: #f9f9f9;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+
+        .nav-btn:hover:not(:disabled) {
+            background: #f0f0f0;
+            border-color: #ccc;
+        }
+
+        .nav-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .nav-btn:active:not(:disabled) {
+            transform: scale(0.98);
+        }
+
+        .legend {
+            display: flex;
+            gap: 20px;
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 1px solid #ddd;
+            font-size: 12px;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .legend-color {
+            width: 20px;
+            height: 12px;
+            border-radius: 2px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>LSTM Gate Simulator</h1>
+        <p class="subtitle">Click each word to see how LSTM gates respond to: "I was sad yesterday but today I am happy"</p>
+
+        <div class="word-buttons" id="wordButtons"></div>
+
+        <div class="gates-container">
+            <div class="gate-card">
+                <div class="gate-title">Forget Gate (f_t)</div>
+                <div id="forgetGates"></div>
+            </div>
+
+            <div class="gate-card">
+                <div class="gate-title">Input Gate (i_t)</div>
+                <div id="inputGates"></div>
+            </div>
+
+            <div class="gate-card">
+                <div class="gate-title">Output Gate (o_t)</div>
+                <div id="outputGates"></div>
+            </div>
+
+            <div class="memory-card">
+                <div class="memory-title">Cell State (Memory)</div>
+                <div id="memoryState"></div>
+            </div>
+        </div>
+
+        <div class="insight-card" id="insightBox"></div>
+
+        <div class="nav-buttons">
+            <button class="nav-btn" id="prevBtn" onclick="previousWord()" style="margin-right: auto;">← Previous</button>
+            <button class="nav-btn" id="nextBtn" onclick="nextWord()" style="margin-left: auto;">Next →</button>
+        </div>
+
+        <div class="legend">
+            <div class="legend-item">
+                <div class="legend-color" style="background: #D05538;"></div>
+                <span>Forget Gate</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: #639922;"></div>
+                <span>Input Gate</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: #EF9F27;"></div>
+                <span>Output Gate</span>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const data = [
+            { 
+                word: "I", 
+                f: 0.7, 
+                i: 0.5, 
+                o: 0.6, 
+                insight: "Starting fresh. The LSTM begins reading the subject." 
+            },
+            { 
+                word: "was", 
+                f: 0.9, 
+                i: 0.6, 
+                o: 0.7, 
+                insight: "Past tense detected. Forget gate stays high (0.9) to preserve context." 
+            },
+            { 
+                word: "sad", 
+                f: 1.0, 
+                i: 0.9, 
+                o: 0.8, 
+                insight: "Emotional word! Forget gate = 1.0 (keep all), Input gate = 0.9 (store strongly). Sadness is dominant in memory." 
+            },
+            { 
+                word: "yesterday", 
+                f: 0.95, 
+                i: 0.8, 
+                o: 0.6, 
+                insight: "Temporal context. Forget gate stays high (0.95). Everything is preserved. Still part of past narrative." 
+            },
+            { 
+                word: "but", 
+                f: 0.2, 
+                i: 0.6, 
+                o: 0.5, 
+                insight: "⚡ TURNING POINT! Forget gate DROPS from 0.95 to 0.2 (discard old sadness). The network prepares for a shift in emotion!" 
+            },
+            { 
+                word: "today", 
+                f: 0.1, 
+                i: 0.9, 
+                o: 0.7, 
+                insight: "Present tense! Forget gate drops to 0.1 (fade past). Input gate = 0.9 (learn new context strongly)." 
+            },
+            { 
+                word: "happy", 
+                f: 0.02, 
+                i: 1.0, 
+                o: 0.95, 
+                insight: "🎉 CLIMAX! Forget gate = 0.02 (old sadness nearly erased). Input gate = 1.0 (fully store happiness). Output = 0.95 (strongly reveal)." 
+            }
+        ];
+
+        let currentIdx = 0;
+        let memory = [0, 0, 0, 0, 0];
+
+        function initUI() {
+            const container = document.getElementById('wordButtons');
+            data.forEach((d, i) => {
+                const btn = document.createElement('button');
+                btn.className = 'word-btn' + (i === 0 ? ' active' : '');
+                btn.textContent = '"' + d.word + '"';
+                btn.onclick = () => selectWord(i);
+                container.appendChild(btn);
+            });
+            updateDisplay();
+        }
+
+        function selectWord(i) {
+            currentIdx = i;
+            updateDisplay();
+        }
+
+        function previousWord() {
+            if (currentIdx > 0) { 
+                currentIdx--; 
+                updateDisplay(); 
+            }
+        }
+
+        function nextWord() {
+            if (currentIdx < data.length - 1) { 
+                currentIdx++; 
+                updateDisplay(); 
+            }
+        }
+
+        function updateDisplay() {
+            const d = data[currentIdx];
+            
+            document.querySelectorAll('.word-btn').forEach((b, i) => {
+                b.classList.toggle('active', i === currentIdx);
+            });
+            
+            const labels = ['Sadness', 'Emotion', 'Context', 'Tense', 'Subject'];
+            
+            // Calculate gate values (with slight variation per element)
+            const fgates = [
+                d.f, 
+                Math.round(d.f * 0.95 * 100) / 100, 
+                Math.round(d.f * 0.85 * 100) / 100, 
+                Math.round(d.f * 0.9 * 100) / 100, 
+                Math.round(d.f * 0.9 * 100) / 100
+            ];
+            
+            const igates = [
+                d.i, 
+                Math.round(d.i * 0.9 * 100) / 100, 
+                Math.round(d.i * 0.85 * 100) / 100, 
+                Math.round(d.i * 0.8 * 100) / 100, 
+                Math.round(d.i * 0.75 * 100) / 100
+            ];
+            
+            const ogates = [
+                d.o, 
+                Math.round(d.o * 0.95 * 100) / 100, 
+                Math.round(d.o * 0.85 * 100) / 100, 
+                Math.round(d.o * 0.9 * 100) / 100, 
+                Math.round(d.o * 0.8 * 100) / 100
+            ];
+
+            // Update forget gates
+            let forgetHTML = '';
+            fgates.forEach((v, i) => {
+                forgetHTML += `<div class="gate-row"><div class="gate-label">${labels[i]}</div><div class="gate-bar"><div class="bar-fill forget-bar" style="width: ${Math.max(v*100, 2)}%"></div></div><div class="gate-value">${v.toFixed(2)}</div></div>`;
+            });
+            document.getElementById('forgetGates').innerHTML = forgetHTML;
+
+            // Update input gates
+            let inputHTML = '';
+            igates.forEach((v, i) => {
+                inputHTML += `<div class="gate-row"><div class="gate-label">${labels[i]}</div><div class="gate-bar"><div class="bar-fill input-bar" style="width: ${Math.max(v*100, 2)}%"></div></div><div class="gate-value">${v.toFixed(2)}</div></div>`;
+            });
+            document.getElementById('inputGates').innerHTML = inputHTML;
+
+            // Update output gates
+            let outputHTML = '';
+            ogates.forEach((v, i) => {
+                outputHTML += `<div class="gate-row"><div class="gate-label">${labels[i]}</div><div class="gate-bar"><div class="bar-fill output-bar" style="width: ${Math.max(v*100, 2)}%"></div></div><div class="gate-value">${v.toFixed(2)}</div></div>`;
+            });
+            document.getElementById('outputGates').innerHTML = outputHTML;
+
+            // Update memory
+            if (currentIdx === 0) {
+                memory = [0, 0, 0, 0, 0];
+            } else {
+                memory = memory.map((m, i) => {
+                    const scaled = m * fgates[i];
+                    const newVal = 0.3 * igates[i];
+                    return Math.round((scaled + newVal) * 1000) / 1000;
+                });
+            }
+
+            let memHTML = '';
+            labels.forEach((l, i) => {
+                memHTML += `<div class="memory-row"><div class="memory-label">${l}</div><div class="memory-value">${memory[i].toFixed(3)}</div></div>`;
+            });
+            document.getElementById('memoryState').innerHTML = memHTML;
+
+            // Update insight
+            document.getElementById('insightBox').innerHTML = `<strong>"${d.word}":</strong> ${d.insight}`;
+            
+            // Update buttons
+            document.getElementById('prevBtn').disabled = currentIdx === 0;
+            document.getElementById('nextBtn').disabled = currentIdx === data.length - 1;
+        }
+
+        initUI();
+    </script>
+</body>
+</html>
